@@ -31,7 +31,7 @@ ifdef DEBUG
   CFLAGS += -DDEBUG -g3
 endif
 
-LDFLAGS	+= 
+LDFLAGS	+= -lpthread
 
 YELLOW          =       \033[0;103m
 RED             =       \033[0;31m
