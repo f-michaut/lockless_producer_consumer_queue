@@ -21,12 +21,8 @@ namespace Lockless {
                 // ListElems *m_next = nullptr;
             };
         public:
-            PC_Queue () :
-                m_head(0), m_tail(nullptr), m_consum_head(nullptr)
-            {};
-
+            PC_Queue () = default;
             ~PC_Queue() {
-                // TODO FIXME Oh shit if one thread destroy the queue before the other it's gonna be fun
                 auto curr = (ListElems *)m_head.load();
 
                 while (curr) {
@@ -37,12 +33,40 @@ namespace Lockless {
                 }
             };
 
-            // TODO create copy / move assignements operators
+            // Delete for now, but maybe implement later
+            PC_Queue(const PC_Queue &other) = delete;
+            PC_Queue(PC_Queue &&other) noexcept
+            {
+                // NOTE Not thread safe, do not call while threads are using the queue
+                this = other;
+            }
 
+            // Delete for now, but maybe implement later
+            PC_Queue &operator=(const PC_Queue &other) = delete;
+            PC_Queue &operator=(PC_Queue &&other) noexcept
+            {
+                // NOTE Not thread safe, do not call while threads are using the queue
+                m_head = other.m_head();
+                m_tail = other.m_tail;
+                m_consum_head = other.m_consum_head;
+                m_size = other.m_size;
+                // Avoid the destructor of the moved variable to free the list
+                other.m_head = 0;
+                return *this;
+            };
+
+            [[nodiscard]]
             std::size_t size() const noexcept { // TODO hard test this function
                 if (m_tail == m_consum_head)
                     return 0; // Check if m_size is already 0 ?
                 return m_size;
+            };
+
+            [[nodiscard]]
+            bool isEmpty() const noexcept {
+                auto head = (ListElems *)m_head.load();
+
+                return head == m_consum_head && head->m_next == 0;
             };
 
             void produce(const T &arg) {
@@ -145,9 +169,9 @@ namespace Lockless {
             };
 
         private:
-            std::atomic_uintptr_t m_head;
-            ListElems *m_tail;
-            ListElems *m_consum_head;
+            std::atomic_uintptr_t m_head = 0;
+            ListElems *m_tail = nullptr;
+            ListElems *m_consum_head = nullptr;
 
             std::atomic_size_t m_size = 0;
     };
